@@ -67,7 +67,7 @@ CREATE TABLE seats (
         FOREIGN KEY (hall_id)
         REFERENCES cinema_halls(hall_id)
         ON DELETE NO ACTION
-        ON UPDATE CASCADE,
+        ON UPDATE NO ACTION,
 
     -- ตำแหน่งที่นั่งต้องไม่ซ้ำภายในโรงเดียวกัน
     CONSTRAINT uq_seats_position
