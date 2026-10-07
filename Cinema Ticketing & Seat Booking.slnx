@@ -5,5 +5,5 @@
     <File Path="queries.sql" />
     <File Path="schema.sql" />
   </Folder>
-  <Project Path="Cinema Ticketing &amp; Seat Booking/Cinema Ticketing &amp; Seat Booking.csproj" />
+  <Project Path="Cinema Ticketing &amp; Seat Booking/Cinema Ticketing &amp; Seat Booking.csproj" Id="f81ce5b7-7f46-47cc-802e-7e3b8a2fa2a9" />
 </Solution>

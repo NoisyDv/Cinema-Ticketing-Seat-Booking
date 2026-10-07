@@ -230,7 +230,7 @@ BEGIN
     WHILE @t <= @num_tickets
     BEGIN
         -- เลือกที่นั่งที่อยู่ในโรงเดียวกับรอบฉาย
-        SELECT TOP 1 @chosen_seat = seat_id
+        SELECT @chosen_seat = seat_id
         FROM seats
         WHERE hall_id = @hall_of_show
         ORDER BY seat_id
@@ -320,3 +320,4 @@ FROM (
 ) t
 GROUP BY ticket_count
 ORDER BY ticket_count;
+
