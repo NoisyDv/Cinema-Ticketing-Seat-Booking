@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Database/">
+    <File Path="data.sql" />
+    <File Path="logic.sql" />
+    <File Path="queries.sql" />
+    <File Path="schema.sql" />
+  </Folder>
+  <Project Path="Cinema Ticketing &amp; Seat Booking/Cinema Ticketing &amp; Seat Booking.csproj" />
+</Solution>
