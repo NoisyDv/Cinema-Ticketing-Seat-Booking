@@ -1,11 +1,3 @@
--- =========================================================
--- schema.sql
--- ระบบจองตั๋วภาพยนตร์และผังที่นั่ง (Cinema Ticketing & Seat Booking)
--- หัวข้อที่ 7 - รายวิชาระบบฐานข้อมูล 2569
--- DBMS: Microsoft SQL Server
--- จำนวนตาราง: 9 ตาราง (อยู่ในเกณฑ์ 8-10 ตาราง)
--- มาตรฐานการตั้งชื่อ: snake_case
--- =========================================================
 
 -- =========================================================
 -- ตาราง: movies
@@ -14,7 +6,7 @@
 CREATE TABLE movies (
     movie_id      INT IDENTITY(1,1) PRIMARY KEY,
     title         VARCHAR(200)  NOT NULL,
-    description   TEXT          NULL,
+    description   VARCHAR(MAX)      NULL,
     duration      INT           NOT NULL,          -- หน่วยเป็นนาที
     genre         VARCHAR(50)   NOT NULL,
     release_date  DATE          NOT NULL,
@@ -90,9 +82,9 @@ CREATE TABLE showtimes (
     showtime_id   INT IDENTITY(1,1) PRIMARY KEY,
     movie_id      INT            NOT NULL,
     hall_id       INT            NOT NULL,
-    start_time    DATETIME2      NOT NULL,
-    end_time      DATETIME2      NOT NULL,
-    ticket_price  DECIMAL(10,2)  NOT NULL,
+    start_time    DATETIME     NOT NULL,
+    end_time      DATETIME      NOT NULL,
+    standard_price  DECIMAL(10,2)  NOT NULL,
     status        VARCHAR(20)    NOT NULL,
 
     CONSTRAINT fk_showtimes_movie
@@ -113,7 +105,7 @@ CREATE TABLE showtimes (
 
     -- ราคาตั๋วต้องไม่ติดลบ
     CONSTRAINT chk_showtimes_price
-        CHECK (ticket_price >= 0),
+        CHECK (standard_price >= 0),
 
     -- สถานะรอบฉายที่อนุญาต
     CONSTRAINT chk_showtimes_status
@@ -129,12 +121,13 @@ CREATE TABLE customers (
     name         VARCHAR(150)  NOT NULL,
     email        VARCHAR(255)  NOT NULL,
     phone        VARCHAR(20)   NOT NULL,
-    created_at   DATETIME2     NOT NULL
-        CONSTRAINT df_customers_created_at DEFAULT SYSDATETIME(),
+    created_at   DATETIME     NOT NULL CONSTRAINT df_customers_created_at 
+    DEFAULT SYSDATETIME(),
 
     -- emailต้องไม่ซ้ำ
     CONSTRAINT uq_customers_email
-        UNIQUE (email)
+        UNIQUE (email),
+   
 );
 
 -- =========================================================
@@ -158,9 +151,11 @@ CREATE TABLE promotions (
     CONSTRAINT chk_promotions_discount_type
         CHECK (discount_type IN ('percentage', 'fixed')),
 
-    -- ค่าส่วนลดต้องไม่ติดลบ
+    -- ค่าส่วนลดต้องเป็นไปตามประเภท (percentage: 0-100, fixed: >=0)
     CONSTRAINT chk_promotions_discount_value
-        CHECK (discount_value >= 0),
+        CHECK ( (discount_type = 'percentage' AND discount_value BETWEEN 0 AND 100)
+               OR
+               (discount_type = 'fixed' AND discount_value >= 0 ) ),
 
     -- วันสิ้นสุดต้องไม่ก่อนวันเริ่มต้น
     CONSTRAINT chk_promotions_date
@@ -185,9 +180,9 @@ CREATE TABLE bookings (
     customer_id     INT            NOT NULL,
     showtime_id     INT            NOT NULL,
     promotion_id    INT            NULL,
-    booking_time    DATETIME2      NOT NULL
+    booking_time    DATETIME     NOT NULL
         CONSTRAINT df_bookings_booking_time DEFAULT SYSDATETIME(),
-    expires_at      DATETIME2      NOT NULL,   -- เวลาหมดอายุการถือครองที่นั่ง
+    expires_at      DATETIME      NOT NULL,   -- เวลาหมดอายุการถือครองที่นั่ง
     booking_status  VARCHAR(20)    NOT NULL,
     total_amount    DECIMAL(10,2)  NOT NULL,
 
@@ -311,44 +306,43 @@ CREATE TABLE payments (
 
 -- =========================================================
 -- Indexes เพื่อเพิ่มประสิทธิภาพการค้นหา
--- (ตามเกณฑ์ของโครงงานที่กำหนดให้มี Indexes)
 -- =========================================================
 
 -- ใช้บ่อยในขั้นตอนจองและรายงาน
-CREATE INDEX ix_showtimes_movie_start
+CREATE INDEX index_showtimes_movie_start
     ON showtimes (movie_id, start_time);
 
-CREATE INDEX ix_showtimes_hall_start
+CREATE INDEX index_showtimes_hall_start
     ON showtimes (hall_id, start_time);
 
-CREATE INDEX ix_showtimes_status
+CREATE INDEX index_showtimes_status
     ON showtimes (status);
 
 -- ค้นหาที่นั่งตามโรง
-CREATE INDEX ix_seats_hall
+CREATE INDEX index_seats_hall
     ON seats (hall_id);
 
 -- ค้นหาการจอง
-CREATE INDEX ix_bookings_customer
+CREATE INDEX index_bookings_customer
     ON bookings (customer_id);
 
-CREATE INDEX ix_bookings_showtime
+CREATE INDEX index_bookings_showtime
     ON bookings (showtime_id);
 
 -- ใช้กับ Trigger ปล่อยที่นั่งที่หมดเวลา
-CREATE INDEX ix_bookings_status_expires
+CREATE INDEX index_bookings_status_expires
     ON bookings (booking_status, expires_at);
 
 -- ค้นหาตั๋ว
-CREATE INDEX ix_tickets_booking
+CREATE INDEX index_tickets_booking
     ON tickets (booking_id);
 
-CREATE INDEX ix_tickets_seat
+CREATE INDEX index_tickets_seat
     ON tickets (seat_id);
 
-CREATE INDEX ix_tickets_status
+CREATE INDEX index_tickets_status
     ON tickets (ticket_status);
 
 -- ค้นหาสถานะการชำระเงิน
-CREATE INDEX ix_payments_status
+CREATE INDEX index_payments_status
     ON payments (payment_status);
