@@ -11,6 +11,7 @@ CREATE TABLE movies (
     genre         VARCHAR(50)   NOT NULL,
     release_date  DATE          NOT NULL,
     status        VARCHAR(20)   NOT NULL,
+    poster_url    VARCHAR(500)      NULL,
 
     -- ระยะเวลาฉายต้องมากกว่า 0
     CONSTRAINT chk_movies_duration
