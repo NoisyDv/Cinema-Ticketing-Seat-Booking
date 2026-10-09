@@ -13,7 +13,7 @@
 
 
 -- =========================================================
--- Query 1: Multi-table JOIN (4 ตาราง)
+-- Query 1: Multi-table JOIN (6 ตาราง)
 -- ประเภท: Multi-table JOIN
 -- คำอธิบาย:
 --   แสดงรายละเอียดการจองตั๋วแบบละเอียด
@@ -56,7 +56,7 @@ SELECT
     ch.hall_name,
     s.start_time,
     s.end_time,
-    s.ticket_price,
+    s.standard_price,
     s.status            AS showtime_status,
     COUNT(t.ticket_id)  AS tickets_sold
 FROM showtimes s
@@ -68,7 +68,7 @@ LEFT JOIN tickets t         ON b.booking_id = t.booking_id
                            AND t.ticket_status = 'issued'
 GROUP BY
     s.showtime_id, m.title, m.genre, ch.hall_name,
-    s.start_time, s.end_time, s.ticket_price, s.status
+    s.start_time, s.end_time, s.standard_price, s.status
 ORDER BY s.start_time;
 
 
@@ -183,7 +183,7 @@ ORDER BY total_revenue DESC;
 -- Query 7: Correlated Subquery
 -- ประเภท: Correlated Subquery
 -- คำอธิบาย:
---   แสดงลูกค้าแต่ละคน พร้อมจำนวนครั้งที่จอง และยอดใช้จ่ายล่าสุด
+--   แสดงลูกค้าแต่ละคน พร้อมจำนวนครั้งที่จองสำเร็จ และยอดจองสูงสุด
 --   ใช้ในหน้ารายชื่อลูกค้าเพื่อดูสรุปพฤติกรรมรายบุคคล
 -- =========================================================
 SELECT
@@ -224,7 +224,7 @@ SELECT
     m.title AS movie_title,
     ch.hall_name,
     s.start_time,
-    s.ticket_price,
+    s.standard_price,
     s.status
 FROM showtimes s
 INNER JOIN movies m        ON s.movie_id = m.movie_id
