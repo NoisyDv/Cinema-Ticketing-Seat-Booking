@@ -1,44 +1,29 @@
-﻿<%@ Page Title="Home Page" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="Cinema_Ticketing___Seat_Booking._Default" %>
+﻿<%@ Page Title="หนังที่กำลังฉาย" Language="C#" MasterPageFile="~/Site.Master" AutoEventWireup="true" CodeBehind="Default.aspx.cs" Inherits="Cinema_Ticketing___Seat_Booking._Default" %>
+<asp:Content ID="Content1" ContentPlaceHolderID="MainContent" runat="server">
+    <ol class="steps" aria-label="ขั้นตอนการจอง">
+        <li class="on" aria-current="step">1 เลือกหนัง</li><li>2 เลือกรอบและที่นั่ง</li><li>3 ชำระเงิน</li><li>4 รับตั๋ว</li>
+    </ol>
+    <h1>วันนี้ดูอะไรดี</h1>
+    <p class="meta">เลือกหนังที่กำลังเปิดจอง แล้วเลือกรอบและที่นั่งในหน้าถัดไป</p>
 
-<asp:Content ID="BodyContent" ContentPlaceHolderID="MainContent" runat="server">
+    <div class="times" role="group" aria-label="กรองตามประเภท">
+        <asp:Literal ID="litGenres" runat="server"></asp:Literal>
+    </div>
 
-    <main>
-        <section class="row" aria-labelledby="aspnetTitle">
-            <h1 id="aspnetTitle">ASP.NET</h1>
-            <p class="lead">ASP.NET is a free web framework for building great Web sites and Web applications using HTML, CSS, and JavaScript.</p>
-            <p><a href="http://www.asp.net" class="btn btn-primary btn-md">Learn more &raquo;</a></p>
-        </section>
-
-        <div class="row">
-            <section class="col-md-4" aria-labelledby="gettingStartedTitle">
-                <h2 id="gettingStartedTitle">Getting started</h2>
-                <p>
-                    ASP.NET Web Forms lets you build dynamic websites using a familiar drag-and-drop, event-driven model.
-                A design surface and hundreds of controls and components let you rapidly build sophisticated, powerful UI-driven sites with data access.
-                </p>
-                <p>
-                    <a class="btn btn-default" href="https://go.microsoft.com/fwlink/?LinkId=301948">Learn more &raquo;</a>
-                </p>
-            </section>
-            <section class="col-md-4" aria-labelledby="librariesTitle">
-                <h2 id="librariesTitle">Get more libraries</h2>
-                <p>
-                    NuGet is a free Visual Studio extension that makes it easy to add, remove, and update libraries and tools in Visual Studio projects.
-                </p>
-                <p>
-                    <a class="btn btn-default" href="https://go.microsoft.com/fwlink/?LinkId=301949">Learn more &raquo;</a>
-                </p>
-            </section>
-            <section class="col-md-4" aria-labelledby="hostingTitle">
-                <h2 id="hostingTitle">Web Hosting</h2>
-                <p>
-                    You can easily find a web hosting company that offers the right mix of features and price for your applications.
-                </p>
-                <p>
-                    <a class="btn btn-default" href="https://go.microsoft.com/fwlink/?LinkId=301950">Learn more &raquo;</a>
-                </p>
-            </section>
-        </div>
-    </main>
-
+    <div class="grid">
+        <asp:Repeater ID="rptMovies" runat="server">
+            <ItemTemplate>
+                <article class="card">
+                    <div class="poster" style='background:<%# Fmt.GenreColor(Eval("genre")) %>'><%# Fmt.Html(Fmt.Initial(Eval("title"))) %></div>
+                    <h3><%# Fmt.Html(Eval("title")) %></h3>
+                    <div class="meta"><%# Fmt.Html(Eval("genre")) %> • <%# Fmt.Duration(Eval("duration")) %></div>
+                    <div class="meta">รอบถัดไป <%# Fmt.ShortDay(Eval("next_start")) %> <%# Fmt.Time(Eval("next_start")) %> · <%# Eval("upcoming_showtimes") %> รอบ · เริ่ม <%# Fmt.Baht(Eval("min_price")) %></div>
+                    <a class="btn block" style="margin-top:12px" href='<%# ResolveUrl("~/Showtimes.aspx?movie=") + Eval("movie_id") %>'>ดูรอบฉาย</a>
+                </article>
+            </ItemTemplate>
+        </asp:Repeater>
+    </div>
+    <asp:Panel ID="pnlEmpty" runat="server" Visible="false" CssClass="card">
+        <p class="meta">ไม่พบหนังในประเภทนี้ ลองเลือกประเภทอื่น</p>
+    </asp:Panel>
 </asp:Content>

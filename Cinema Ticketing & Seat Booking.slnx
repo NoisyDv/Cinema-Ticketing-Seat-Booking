@@ -1,9 +1,25 @@
 <Solution>
   <Folder Name="/Database/">
-    <File Path="data.sql" />
-    <File Path="logic.sql" />
-    <File Path="queries.sql" />
-    <File Path="schema.sql" />
+    <File Path="database/schema.sql" />
+    <File Path="database/data.sql" />
+    <File Path="database/logic.sql" />
+    <File Path="database/queries.sql" />
+    <File Path="database/tests.sql" />
+    <File Path="database/sanity_checks.sql" />
+  </Folder>
+  <Folder Name="/Docs/">
+    <File Path="README.md" />
+    <File Path="docs/report/chapter1_scope_business_rules.md" />
+    <File Path="docs/report/chapter2_outline_fds.md" />
+    <File Path="docs/report/chapter3_design.md" />
+    <File Path="docs/report/data_dictionary.md" />
+  </Folder>
+  <Folder Name="/Tools/">
+    <File Path="tools/generate_data.py" />
+    <File Path="tools/mock_pools.py" />
+    <File Path="tools/hash_password.py" />
+    <File Path="tools/verify_data.py" />
+    <File Path="tools/gen_designer.py" />
   </Folder>
   <Project Path="Cinema Ticketing &amp; Seat Booking/Cinema Ticketing &amp; Seat Booking.csproj" />
 </Solution>

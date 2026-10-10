@@ -1,21 +1,22 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
 using System.Web;
-using System.Web.Optimization;
-using System.Web.Routing;
-using System.Web.Security;
-using System.Web.SessionState;
 
 namespace Cinema_Ticketing___Seat_Booking
 {
     public class Global : HttpApplication
     {
-        void Application_Start(object sender, EventArgs e)
+        protected void Session_Start(object sender, EventArgs e)
         {
-            // Code that runs on application startup
-            RouteConfig.RegisterRoutes(RouteTable.Routes);
-            BundleConfig.RegisterBundles(BundleTable.Bundles);
+            // เขียนค่าลง session ทันที เพื่อให้ SessionID ถูกบันทึกและคงที่ (จำเป็นต่อ ViewStateUserKey ของผู้ใช้ที่ยังไม่ล็อกอิน)
+            Session["init"] = 1;
+        }
+
+        protected void Application_Error(object sender, EventArgs e)
+        {
+            // บันทึกข้อผิดพลาดไว้ฝั่งเซิร์ฟเวอร์ ส่วนผู้ใช้จะเห็นหน้า Error.aspx (customErrors) ไม่เห็น stack trace
+            Exception ex = Server.GetLastError();
+            if (ex != null) Trace.TraceError(ex.ToString());
         }
     }
 }
