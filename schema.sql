@@ -127,7 +127,7 @@ CREATE TABLE customers (
 
     -- emailต้องไม่ซ้ำ
     CONSTRAINT uq_customers_email
-        UNIQUE (email),
+        UNIQUE (email)
    
 );
 
