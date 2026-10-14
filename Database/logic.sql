@@ -36,6 +36,8 @@
 --   50007 ช่องทางชำระเงินไม่ถูกต้อง
 --   50008 ไม่พบ booking หรือ booking ไม่ได้อยู่ในสถานะ pending
 --   50009 booking หมดเวลาถือครองที่นั่งแล้ว
+--   50010 ไม่พบการจอง หรือไม่ใช่เจ้าของการจอง (sp_CancelBooking)
+--   50011 การจองยกเลิกไม่ได้: ถูกยกเลิก/หมดเวลาไปแล้ว หรือรอบฉายเริ่มไปแล้ว (sp_CancelBooking)
 -- =========================================================
 
 CREATE OR ALTER PROCEDURE sp_BookMovieSeats
@@ -309,7 +311,109 @@ GO
 
 
 -- =========================================================
--- 2. Trigger: trg_ReleaseExpiredSeatLocks
+-- 2. Stored Procedure: sp_CancelBooking
+-- ---------------------------------------------------------
+-- หน้าที่:
+--   - ยกเลิกการจองของลูกค้า (เฉพาะเจ้าของ) ทั้งแบบ pending และ confirmed
+--   - คืนสถานะใน transaction เดียว:
+--       bookings -> cancelled, tickets -> cancelled,
+--       payments ที่ paid -> refunded (ที่ค้าง pending -> failed)
+--   - ที่นั่งว่างทันทีหลัง COMMIT (trigger ข้อ 3 ช่วยไล่ปิดตั๋วซ้ำให้อีกชั้น)
+--
+-- เงื่อนไข (ไม่ผ่านจะ ROLLBACK แล้ว THROW):
+--   - booking ต้องมีอยู่และเป็นของ @customer_id (ไม่งั้น 50010)
+--     (ใช้ error เดียวกันทั้งสองกรณี เพื่อไม่ให้เดารหัสการจองของคนอื่นได้)
+--   - booking ต้องยัง pending/confirmed (ไม่งั้น 50011)
+--   - รอบฉายต้องยังไม่เริ่ม (ไม่งั้น 50011 กันยอดรายได้ในรายงานย้อนหลังเพี้ยน)
+--
+-- การป้องกันยกเลิกซ้ำพร้อมกัน:
+--   ล็อกแถว booking ด้วย UPDLOCK ตั้งแต่ต้น transaction
+--   ใครมาทีหลังจะเห็นสถานะ cancelled แล้วได้ 50011
+--
+-- ตัวอย่าง: EXEC sp_CancelBooking @booking_id = 12, @customer_id = 3;
+--
+-- รหัส error ที่ procedure นี้ใช้ (ดูรายการรวมที่หัวข้อที่ 1):
+--   50010 ไม่พบการจอง หรือไม่ใช่เจ้าของการจอง
+--   50011 การจองยกเลิกไม่ได้ (ยกเลิก/หมดเวลาไปแล้ว หรือรอบฉายเริ่มไปแล้ว)
+-- =========================================================
+CREATE OR ALTER PROCEDURE sp_CancelBooking
+    @booking_id   INT,   -- รหัสการจองที่จะยกเลิก
+    @customer_id  INT    -- รหัสเจ้าของการจอง (กันคนอื่นมายกเลิกแทน)
+AS
+BEGIN
+    SET NOCOUNT ON;     -- ไม่ส่งจำนวนแถวที่ได้รับผลกลับไปยัง client
+    SET XACT_ABORT ON;  -- error ใด ๆ ใน transaction ให้ rollback ทันที
+
+    -- ----- ตัวแปรทำงาน -----
+    DECLARE @status      VARCHAR(20);
+    DECLARE @owner_id    INT;
+    DECLARE @start_time  DATETIME;
+    DECLARE @refund      DECIMAL(10,2);
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        -- ขั้นตอนที่ 1: ล็อกและตรวจ booking
+        -- UPDLOCK: กันกดยกเลิก booking เดียวกันพร้อมกัน
+        SELECT @status   = booking_status,
+               @owner_id = customer_id
+        FROM bookings WITH (UPDLOCK, ROWLOCK)
+        WHERE booking_id = @booking_id;
+
+        IF @customer_id IS NULL OR @status IS NULL OR @owner_id <> @customer_id
+            THROW 50010, N'ไม่พบการจองนี้ หรือไม่ใช่เจ้าของการจอง', 1;
+
+        IF @status NOT IN ('pending', 'confirmed')
+            THROW 50011, N'การจองนี้ถูกยกเลิกหรือหมดเวลาไปแล้ว', 1;
+
+        -- ขั้นตอนที่ 2: ตรวจว่ารอบฉายยังไม่เริ่ม
+        SELECT @start_time = s.start_time
+        FROM bookings b
+        INNER JOIN showtimes s ON s.showtime_id = b.showtime_id
+        WHERE b.booking_id = @booking_id;
+
+        IF @start_time <= SYSDATETIME()
+            THROW 50011, N'รอบฉายนี้เริ่มไปแล้ว ไม่สามารถยกเลิกได้', 1;
+
+        -- ขั้นตอนที่ 3: คืนสถานะทุกตารางใน transaction เดียว
+        -- 3.1 ยกเลิก booking (trigger จะช่วยไล่ปิดตั๋วซ้ำให้อีกชั้น)
+        UPDATE bookings SET booking_status = 'cancelled' WHERE booking_id = @booking_id;
+
+        -- 3.2 ยกเลิกตั๋วทุกใบของการจองนี้
+        UPDATE tickets SET ticket_status = 'cancelled'
+        WHERE booking_id = @booking_id AND ticket_status <> 'cancelled';
+
+        -- 3.3 คืนเงิน: ที่จ่ายแล้ว -> refunded, ที่ค้าง pending -> failed
+        --     (booking แบบล็อกที่นั่งไว้แต่ยังไม่จ่าย จะไม่มีแถว payments เลย)
+        UPDATE payments SET payment_status = 'refunded'
+        WHERE booking_id = @booking_id AND payment_status = 'paid';
+
+        UPDATE payments SET payment_status = 'failed'
+        WHERE booking_id = @booking_id AND payment_status = 'pending';
+
+        SELECT @refund = ISNULL(SUM(amount), 0)
+        FROM payments
+        WHERE booking_id = @booking_id AND payment_status = 'refunded';
+
+        COMMIT TRANSACTION;
+
+        SELECT
+            @booking_id AS booking_id,
+            @refund     AS refund_amount,
+            N'ยกเลิกการจองสำเร็จ' AS message;
+    END TRY
+    BEGIN CATCH
+        IF XACT_STATE() <> 0
+            ROLLBACK TRANSACTION;
+
+        THROW;   -- ส่ง error เดิมกลับให้ผู้เรียก เพื่อให้รู้ว่าการยกเลิกล้มเหลว
+    END CATCH
+END;
+GO
+
+
+-- =========================================================
+-- 3. Trigger: trg_ReleaseExpiredSeatLocks
 -- ---------------------------------------------------------
 -- หน้าที่:
 --   - ทำงานเมื่อมีการ INSERT หรือ UPDATE ตาราง bookings
@@ -368,7 +472,7 @@ GO
 
 
 -- =========================================================
--- 3. Reporting View: vw_BoxOfficeOccupancyReport
+-- 4. Reporting View: vw_BoxOfficeOccupancyReport
 -- ---------------------------------------------------------
 -- หน้าที่:
 --   - สรุปข้อมูลสำหรับผู้บริหารรายภาพยนตร์
@@ -494,6 +598,28 @@ EXEC sp_BookMovieSeats
 
 -- ชำระ booking ที่หมดเวลาแล้ว ต้องได้ error 50008 (เพราะเป็น expired แล้ว)
 EXEC sp_BookMovieSeats @confirm_booking_id = 11, @payment_method = 'cash';
+
+-- D) ยกเลิกการจอง (แทน 12/3 ด้วย booking_id/customer_id จริง)
+--    จองแบบจ่ายทันทีก่อน 1 booking แล้วค่อยยกเลิก
+EXEC sp_BookMovieSeats
+    @customer_id = 3, @showtime_id = 1, @seat_ids = '40,41';
+
+EXEC sp_CancelBooking @booking_id = 12, @customer_id = 3;
+
+-- ตรวจว่า booking/tickets/payments เปลี่ยนสถานะครบ
+SELECT booking_status FROM bookings WHERE booking_id = 12;       -- cancelled
+SELECT DISTINCT ticket_status FROM tickets WHERE booking_id = 12; -- cancelled
+SELECT payment_status FROM payments WHERE booking_id = 12;       -- refunded
+
+-- ที่นั่งว่างอีกครั้ง จองซ้ำได้
+EXEC sp_BookMovieSeats
+    @customer_id = 1, @showtime_id = 1, @seat_ids = '40';
+
+-- ยกเลิกซ้ำ ต้องได้ error 50011
+EXEC sp_CancelBooking @booking_id = 12, @customer_id = 3;
+
+-- ยกเลิกของคนอื่น ต้องได้ error 50010
+EXEC sp_CancelBooking @booking_id = 12, @customer_id = 1;
 
 -- รายงานรายได้และอัตราการครองที่นั่ง
 SELECT * FROM vw_BoxOfficeOccupancyReport

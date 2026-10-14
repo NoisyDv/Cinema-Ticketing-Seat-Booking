@@ -5,7 +5,7 @@
 | ลำดับ | ไฟล์ | หน้าที่ |
 |---|---|---|
 | 1 | `schema.sql` | สร้างตาราง 9 ตาราง (`movies`, `cinema_halls`, `seats`, `showtimes`, `customers`, `promotions`, `bookings`, `tickets`, `payments`) + index |
-| 2 | `data.sql` | ใส่ mock data (หนัง 30 เรื่อง, โรง 20 โรง, ที่นั่ง, โปรโมชัน, ลูกค้า, รอบฉาย, การจอง) |
+| 2 | `data.sql` | ใส่ mock data (หนังจริง 30 เรื่อง + โปสเตอร์, โรง 20 โรง, ที่นั่ง, โปรโมชัน, ลูกค้า, รอบฉาย, การจอง — ดูแลด้วยมือ ห้ามปั่นใหม่ทับ) |
 | 3 | `logic.sql` | สร้าง `sp_BookMovieSeats` (จอง/ล็อก/จ่าย), trigger `trg_ReleaseExpiredSeatLocks`, view `vw_BoxOfficeOccupancyReport` |
 | 4 | `queries.sql` | query ตัวอย่าง 10 ข้อ (ไม่ต้องรันทั้งหมด — เปิดดูเป็นข้อ ๆ ได้) |
 
@@ -27,10 +27,10 @@
   - อัญประกาศเดี่ยว: `Posters/Harry_Potter_and_the_Philosopher's_Stone.webp`
   - นามสกุล `.jpg` หนึ่งไฟล์: `Posters/Star_Wars.jpg`
 
-## สร้าง data.sql ใหม่
+## หมายเหตุเรื่อง data.sql
 
-```bash
-python Database/generate_mock_data.py
-```
-
-จะได้ `data.sql` ใหม่ (ค่า default เขียนทับไฟล์ชื่อ `data.sql` ที่ working dir — ย้ายมาแทนไฟล์ใน `Database/` เอง)
+- `data.sql` ปัจจุบันเป็นข้อมูลที่แต่ง/แก้ด้วยมือแล้ว (ชื่อหนังจริง 30 เรื่อง, poster_url ชี้ `Posters/`,
+  จำนวนแถวปรับแล้ว) — **ห้ามรันสคริปต์ปั่นข้อมูลทับ** เพราะสคริปต์รุ่นเก่าสร้างชื่อหนังสมมติ
+  ไม่มีคอลัมน์ poster_url และจำนวนแถวไม่ตรงกัน (สคริปต์ต้นฉบับถูกลบออกจาก repo แล้ว
+  ดูประวัติได้ด้วย `git log -- Database/generate_mock_data.py`)
+- ถ้าจะแก้ข้อมูล ให้แก้ `data.sql` ตรง ๆ ทีละส่วนเท่านั้น
