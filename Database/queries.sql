@@ -6,10 +6,8 @@
 --
 -- ครอบคลุมตามเกณฑ์:
 --   - Multi-table JOIN (≥ 3 ตาราง)        : 2 ข้อ  (Query 1-2)
---   - GROUP BY + HAVING                   : 2 ข้อ  (Query 3-4)
---   - CTE + LEFT JOIN + Aggregate         : 1 ข้อ  (Query 5)
---   - Correlated Subquery / NOT EXISTS    : 2 ข้อ  (Query 6-7)
---   - Self-join                           : 1 ข้อ  (Query 8)
+--   - GROUP BY + HAVING                   : 3 ข้อ  (Query 3-5)
+--   - Subquery / Correlated / EXISTS      : 3 ข้อ  (Query 6-8)
 --   - Window Function                     : 2 ข้อ  (Query 9-10)
 --
 -- นิยามรายได้ที่ใช้ร่วมกันทุก query (ตรงกับ vw_BoxOfficeOccupancyReport):
@@ -180,13 +178,14 @@ ORDER BY occupancy_percent DESC;
 
 
 -- =========================================================
--- Query 5: CTE + LEFT JOIN + Aggregate
--- ประเภท: CTE
+-- Query 5: GROUP BY + HAVING (ใช้ CTE ช่วยสรุปยอดก่อน)
+-- ประเภท: GROUP BY + HAVING
 -- ใช้ที่: รายงานประสิทธิภาพโปรโมชัน (ฝ่ายการตลาด)
 -- คำอธิบาย:
---   สรุปผลของแต่ละโปรโมชัน: ใช้กี่ครั้ง ยอดก่อนหักส่วนลด ส่วนลดที่ให้ไป
---   และรายได้สุทธิ ใช้ CTE สรุปยอดตั๋วต่อ booking ก่อน
---   LEFT JOIN จาก promotions เพื่อให้โปรโมชันที่ยังไม่มีคนใช้แสดงเป็น 0
+--   สรุปผลของแต่ละโปรโมชันที่ถูกใช้ตั้งแต่ 2 ครั้งขึ้นไป: ใช้กี่ครั้ง
+--   ยอดก่อนหักส่วนลด ส่วนลดที่ให้ไป และรายได้สุทธิ
+--   ใช้ CTE สรุปยอดตั๋วต่อ booking ก่อน แล้วกรองด้วย HAVING
+--   (โปรที่ไม่เคยถูกใช้เลยจะไม่ปรากฏในรายงานนี้)
 -- ตารางที่ใช้: promotions, bookings, payments, tickets
 -- =========================================================
 WITH booking_subtotal AS (
@@ -211,6 +210,7 @@ LEFT JOIN payments pay        ON pay.booking_id = b.booking_id
                              AND pay.payment_status = 'paid'
 LEFT JOIN booking_subtotal bs ON bs.booking_id = b.booking_id
 GROUP BY p.promotion_id, p.promotion_code, p.discount_type, p.discount_value
+HAVING COUNT(b.booking_id) >= 2
 ORDER BY times_used DESC, net_revenue DESC;
 
 
@@ -284,37 +284,43 @@ ORDER BY s.start_time;
 
 
 -- =========================================================
--- Query 8: Self-join
--- ประเภท: Self-join
+-- Query 8: EXISTS + Correlated Subquery (รอบฉายที่เวลาทับกัน)
+-- ประเภท: Subquery (EXISTS + Correlated)
 -- ใช้ที่: ผู้ดูแลระบบตรวจความถูกต้องของตารางฉาย
 -- คำอธิบาย:
---   หารอบฉายที่เวลาทับกันในโรงเดียวกัน (schema มีแค่ end_time > start_time
+--   หารอบฉายที่มีรอบอื่นทับกันในโรงเดียวกัน (schema มีแค่ end_time > start_time
 --   ไม่มี constraint กันเวลาทับ จึงใช้ query นี้ตรวจกฎ "รอบในโรงเดียวกันห้ามทับกัน")
---   เงื่อนไขทับกัน: a.start < b.end และ b.start < a.end
---   a.showtime_id < b.showtime_id กันไม่ให้ได้คู่ซ้ำกลับด้าน
+--   เงื่อนไขทับกัน: o.start < s.end และ s.start < o.end
+--   ใช้ EXISTS กรองเฉพาะรอบที่ทับจริง และ correlated subquery นับจำนวนรอบที่ทับ
 --   ผลลัพธ์ควรว่างเมื่อข้อมูลถูกต้อง
 -- =========================================================
 SELECT
     ch.hall_name,
-    a.showtime_id  AS showtime_a,
-    ma.title       AS movie_a,
-    a.start_time   AS start_a,
-    a.end_time     AS end_a,
-    b.showtime_id  AS showtime_b,
-    mb.title       AS movie_b,
-    b.start_time   AS start_b,
-    b.end_time     AS end_b
-FROM showtimes a
-INNER JOIN showtimes b     ON a.hall_id = b.hall_id
-                          AND a.showtime_id < b.showtime_id
-                          AND a.start_time < b.end_time
-                          AND b.start_time < a.end_time
-INNER JOIN cinema_halls ch ON ch.hall_id  = a.hall_id
-INNER JOIN movies ma       ON ma.movie_id = a.movie_id
-INNER JOIN movies mb       ON mb.movie_id = b.movie_id
-WHERE a.status <> 'cancelled'
-  AND b.status <> 'cancelled'
-ORDER BY ch.hall_name, a.start_time;
+    s.showtime_id,
+    m.title          AS movie_title,
+    s.start_time,
+    s.end_time,
+    (SELECT COUNT(*)
+     FROM showtimes o
+     WHERE o.hall_id = s.hall_id
+       AND o.showtime_id <> s.showtime_id
+       AND o.status <> 'cancelled'
+       AND o.start_time < s.end_time
+       AND s.start_time < o.end_time) AS overlap_count
+FROM showtimes s
+INNER JOIN cinema_halls ch ON ch.hall_id = s.hall_id
+INNER JOIN movies m        ON m.movie_id = s.movie_id
+WHERE s.status <> 'cancelled'
+  AND EXISTS (
+      SELECT 1
+      FROM showtimes o2
+      WHERE o2.hall_id = s.hall_id
+        AND o2.showtime_id <> s.showtime_id
+        AND o2.status <> 'cancelled'
+        AND o2.start_time < s.end_time
+        AND s.start_time < o2.end_time
+  )
+ORDER BY ch.hall_name, s.start_time;
 
 
 -- =========================================================
