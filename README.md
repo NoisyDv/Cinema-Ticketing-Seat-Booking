@@ -9,10 +9,9 @@
 /                                          (repo root)
 ├── Database/                              สคริปต์ SQL ทั้งหมด
 │   ├── schema.sql                         สร้างตาราง + index (รันก่อน)
-│   ├── data.sql                           mock data incl. poster_url (รันที่ 2)
+│   ├── data.sql                           mock data (หนังจริง 30 เรื่อง + โปสเตอร์, รันที่ 2)
 │   ├── logic.sql                          procedure/trigger/view (รันที่ 3)
 │   ├── queries.sql                        query ตัวอย่าง 10 ข้อ (อ้างอิง)
-│   ├── generate_mock_data.py              สคริปต์ปั่น data.sql
 │   └── README.md                          วิธีรัน SQL + ผูกกับเว็บ
 │
 ├── Posters/  → ย้ายแล้ว ไม่อยู่ที่ root อีกต่อไป
@@ -62,4 +61,9 @@
 - `Pages/Booking.aspx?showtime_id=N` — ผังที่นั่ง + ฟอร์มจอง เรียก
   `sp_BookMovieSeats` (ลูกค้าอ้างอิงด้วยอีเมล, สมัครอัตโนมัติถ้ายังไม่มี)
 - `Pages/History.aspx` — ประวัติการจอง + ตั๋ว ค้นหาด้วยอีเมล (เรียงล่าสุดก่อน)
+  + ยกเลิกการจองได้ (เรียก `sp_CancelBooking` คืนเงินตามยอดที่จ่ายจริง)
 - `Pages/Dashboard.aspx` — รายงาน Box Office รายหนัง (`vw_BoxOfficeOccupancyReport` + จัดอันดับ)
+- `Pages/AdminLogin.aspx` — ด่านรหัสแอดมิน (รหัสเดียวใน `Web.config` หัวข้อ `AdminPasscode`)
+- `Pages/AdminShowtimes.aspx` — เพิ่ม/ยกเลิกรอบฉาย (กันรอบชน, ยกเลิกได้เฉพาะรอบว่างที่ยังไม่เริ่ม)
+- `Pages/AdminPromos.aspx` — เพิ่ม/เปิด-ปิดโปรโมชัน
+- `Pages/AdminMovies.aspx` — เปิด/ปิดการฉายของหนัง + เพิ่มหนังใหม่พร้อมแนบไฟล์โปสเตอร์

@@ -81,6 +81,10 @@
     <Content Include="Pages\Booking.aspx" />
     <Content Include="Pages\History.aspx" />
     <Content Include="Pages\Dashboard.aspx" />
+    <Content Include="Pages\AdminLogin.aspx" />
+    <Content Include="Pages\AdminShowtimes.aspx" />
+    <Content Include="Pages\AdminPromos.aspx" />
+    <Content Include="Pages\AdminMovies.aspx" />
     <Content Include="Scripts\theme.js" />
     <Content Include="Scripts\booking.js" />
     <Content Include="Posters\*.webp" />
@@ -92,6 +96,7 @@
   <ItemGroup>
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Data\Db.cs" />
+    <Compile Include="Data\AdminAuth.cs" />
     <Compile Include="Data\MovieRepository.cs" />
     <Compile Include="Data\PosterHelper.cs" />
     <Compile Include="Data\Validation.cs" />
@@ -100,6 +105,9 @@
     <Compile Include="Models\SeatRow.cs" />
     <Compile Include="Models\BookingInfo.cs" />
     <Compile Include="Models\BoxOfficeRow.cs" />
+    <Compile Include="Models\AdminShowtime.cs" />
+    <Compile Include="Models\HallOption.cs" />
+    <Compile Include="Models\Promotion.cs" />
     <Compile Include="Pages\Movies.aspx.cs">
       <DependentUpon>Movies.aspx</DependentUpon>
       <SubType>ASPXCodeBehind</SubType>
@@ -134,6 +142,34 @@
     </Compile>
     <Compile Include="Pages\Dashboard.aspx.designer.cs">
       <DependentUpon>Dashboard.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\AdminLogin.aspx.cs">
+      <DependentUpon>AdminLogin.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\AdminLogin.aspx.designer.cs">
+      <DependentUpon>AdminLogin.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\AdminShowtimes.aspx.cs">
+      <DependentUpon>AdminShowtimes.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\AdminShowtimes.aspx.designer.cs">
+      <DependentUpon>AdminShowtimes.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\AdminPromos.aspx.cs">
+      <DependentUpon>AdminPromos.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\AdminPromos.aspx.designer.cs">
+      <DependentUpon>AdminPromos.aspx</DependentUpon>
+    </Compile>
+    <Compile Include="Pages\AdminMovies.aspx.cs">
+      <DependentUpon>AdminMovies.aspx</DependentUpon>
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
+    <Compile Include="Pages\AdminMovies.aspx.designer.cs">
+      <DependentUpon>AdminMovies.aspx</DependentUpon>
     </Compile>
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>

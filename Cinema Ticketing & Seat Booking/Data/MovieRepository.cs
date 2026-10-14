@@ -308,6 +308,403 @@ ORDER BY total_revenue DESC;";
             return result;
         }
 
+        // ยกเลิกการจองของลูกค้า (ตรวจเจ้าของด้วยอีเมล) คืนยอดเงินที่ได้คืน
+        // logic  اصلیอยู่ใน sp_CancelBooking (Database/logic.sql) ที่นี่แค่เรียกใช้
+        public decimal CancelBooking(string email, int bookingId)
+        {
+            using (SqlConnection conn = Db.Open())
+            {
+                int customerId;
+                using (SqlCommand cmd = new SqlCommand(
+                    "SELECT customer_id FROM customers WHERE email = @email", conn))
+                {
+                    cmd.Parameters.Add("@email", SqlDbType.VarChar, 255).Value = email;
+                    object found = cmd.ExecuteScalar();
+                    if (found == null || found == DBNull.Value)
+                        throw new InvalidOperationException("customer not found");
+                    customerId = Convert.ToInt32(found);
+                }
+
+                using (SqlCommand cmd = new SqlCommand("sp_CancelBooking", conn))
+                {
+                    cmd.CommandType = CommandType.StoredProcedure;
+                    cmd.Parameters.Add("@booking_id", SqlDbType.Int).Value = bookingId;
+                    cmd.Parameters.Add("@customer_id", SqlDbType.Int).Value = customerId;
+                    using (SqlDataReader rd = cmd.ExecuteReader())
+                    {
+                        if (!rd.Read())
+                            throw new InvalidOperationException("empty proc result");
+                        return Convert.ToDecimal(rd["refund_amount"]);
+                    }
+                }
+            }
+        }
+
+        // ---------- ส่วนแอดมิน (ไม่มีระบบ login/role ใช้ด่านรหัสแทน ดู Data/AdminAuth) ----------
+
+        // ดึงรอบฉายทั้งหมด กรองตามสถานะได้ (scheduled/completed/cancelled หรือทั้งหมด)
+        public List<AdminShowtime> AdminGetShowtimes(string status, int? movieId)
+        {
+            const string sql = @"
+SELECT s.showtime_id, m.title, ch.hall_name, s.start_time, s.end_time,
+       s.standard_price, s.status,
+       (SELECT COUNT(*)
+        FROM bookings b
+        WHERE b.showtime_id = s.showtime_id
+          AND (b.booking_status = 'confirmed'
+               OR (b.booking_status = 'pending' AND b.expires_at > SYSDATETIME()))
+       ) AS active_n
+FROM showtimes s
+INNER JOIN movies m ON m.movie_id = s.movie_id
+INNER JOIN cinema_halls ch ON ch.hall_id = s.hall_id
+WHERE (@status IS NULL OR s.status = @status)
+  AND (@movie IS NULL OR s.movie_id = @movie)
+ORDER BY s.start_time;";
+
+            List<AdminShowtime> result = new List<AdminShowtime>();
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = 10;
+                cmd.Parameters.Add("@status", SqlDbType.VarChar, 20).Value =
+                    (object)status ?? DBNull.Value;
+                cmd.Parameters.Add("@movie", SqlDbType.Int).Value =
+                    (object)movieId ?? DBNull.Value;
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                {
+                    while (rd.Read())
+                    {
+                        AdminShowtime row = new AdminShowtime();
+                        row.ShowtimeId = rd.GetInt32(0);
+                        row.MovieTitle = rd.GetString(1);
+                        row.HallName = rd.GetString(2);
+                        row.StartTime = rd.GetDateTime(3);
+                        row.EndTime = rd.GetDateTime(4);
+                        row.StandardPrice = rd.GetDecimal(5);
+                        row.Status = rd.GetString(6);
+                        row.ActiveBookings = rd.GetInt32(7);
+                        result.Add(row);
+                    }
+                }
+            }
+            return result;
+        }
+
+        // เพิ่มรอบฉาย (กันรอบชนกันในโรงเดียวกัน รอบที่ cancelled แล้วไม่นับ)
+        // คืน showtime_id ที่สร้าง
+        public int AdminCreateShowtime(int movieId, int hallId, DateTime start, DateTime end, decimal price)
+        {
+            if (end <= start)
+                throw new InvalidOperationException("BAD_TIME");
+            if (start <= DateTime.Now)
+                throw new InvalidOperationException("PAST_TIME");
+            if (price < 0)
+                throw new InvalidOperationException("BAD_PRICE");
+
+            const string overlapSql = @"
+SELECT COUNT(*)
+FROM showtimes WITH (UPDLOCK, HOLDLOCK)
+WHERE hall_id = @hall
+  AND status IN ('scheduled', 'completed')
+  AND @start < end_time AND @end > start_time;";
+
+            const string insertSql = @"
+INSERT INTO showtimes (movie_id, hall_id, start_time, end_time, standard_price, status)
+VALUES (@movie, @hall, @start, @end, @price, 'scheduled');
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (SqlConnection conn = Db.Open())
+            using (SqlTransaction tx = conn.BeginTransaction())
+            {
+                int overlap;
+                using (SqlCommand cmd = new SqlCommand(overlapSql, conn, tx))
+                {
+                    cmd.Parameters.Add("@hall", SqlDbType.Int).Value = hallId;
+                    cmd.Parameters.Add("@start", SqlDbType.DateTime).Value = start;
+                    cmd.Parameters.Add("@end", SqlDbType.DateTime).Value = end;
+                    overlap = (int)cmd.ExecuteScalar();
+                }
+                if (overlap > 0)
+                {
+                    tx.Rollback();
+                    throw new InvalidOperationException("OVERLAP");
+                }
+
+                try
+                {
+                    int newId;
+                    using (SqlCommand cmd = new SqlCommand(insertSql, conn, tx))
+                    {
+                        cmd.Parameters.Add("@movie", SqlDbType.Int).Value = movieId;
+                        cmd.Parameters.Add("@hall", SqlDbType.Int).Value = hallId;
+                        cmd.Parameters.Add("@start", SqlDbType.DateTime).Value = start;
+                        cmd.Parameters.Add("@end", SqlDbType.DateTime).Value = end;
+                        SqlParameter priceParam = cmd.Parameters.Add("@price", SqlDbType.Decimal);
+                        priceParam.Precision = 10;
+                        priceParam.Scale = 2;
+                        priceParam.Value = price;
+                        newId = (int)cmd.ExecuteScalar();
+                    }
+                    tx.Commit();
+                    return newId;
+                }
+                catch (SqlException ex)
+                {
+                    tx.Rollback();
+                    if (ex.Number == 547)
+                        throw new InvalidOperationException("BAD_REF");
+                    throw;
+                }
+            }
+        }
+
+        // ยกเลิกรอบฉาย ได้เฉพาะรอบ scheduled ที่ยังไม่เริ่ม และไม่มี booking ค้าง
+        public void AdminCancelShowtime(int showtimeId)
+        {
+            const string cancelSql = @"
+UPDATE showtimes SET status = 'cancelled'
+WHERE showtime_id = @id
+  AND status = 'scheduled'
+  AND start_time > SYSDATETIME()
+  AND NOT EXISTS (
+      SELECT 1 FROM bookings b
+      WHERE b.showtime_id = showtimes.showtime_id
+        AND (b.booking_status = 'confirmed'
+             OR (b.booking_status = 'pending' AND b.expires_at > SYSDATETIME())));";
+
+            const string diagSql = @"
+SELECT s.status, s.start_time,
+       (SELECT COUNT(*)
+        FROM bookings b
+        WHERE b.showtime_id = s.showtime_id
+          AND (b.booking_status = 'confirmed'
+               OR (b.booking_status = 'pending' AND b.expires_at > SYSDATETIME()))) AS active_n
+FROM showtimes s
+WHERE s.showtime_id = @id;";
+
+            using (SqlConnection conn = Db.Open())
+            {
+                using (SqlCommand cmd = new SqlCommand(cancelSql, conn))
+                {
+                    cmd.Parameters.Add("@id", SqlDbType.Int).Value = showtimeId;
+                    if (cmd.ExecuteNonQuery() > 0) return;
+                }
+                using (SqlCommand cmd = new SqlCommand(diagSql, conn))
+                {
+                    cmd.Parameters.Add("@id", SqlDbType.Int).Value = showtimeId;
+                    using (SqlDataReader rd = cmd.ExecuteReader())
+                    {
+                        if (!rd.Read())
+                            throw new InvalidOperationException("NOT_FOUND");
+                        string status = rd.GetString(0);
+                        DateTime start = rd.GetDateTime(1);
+                        int active = rd.GetInt32(2);
+                        if (status != "scheduled")
+                            throw new InvalidOperationException("BAD_STATUS");
+                        if (start <= DateTime.Now)
+                            throw new InvalidOperationException("STARTED");
+                        if (active > 0)
+                            throw new InvalidOperationException("HAS_BOOKINGS:" + active);
+                        throw new InvalidOperationException("UNKNOWN");
+                    }
+                }
+            }
+        }
+
+        // ดึงโปรโมชันทั้งหมด
+        public List<Promotion> AdminGetPromos()
+        {
+            const string sql = @"
+SELECT promotion_id, promotion_code, discount_type, discount_value,
+       start_date, end_date, status
+FROM promotions
+ORDER BY end_date DESC, status;";
+
+            List<Promotion> result = new List<Promotion>();
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = 5;
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                {
+                    while (rd.Read())
+                    {
+                        Promotion p = new Promotion();
+                        p.PromotionId = rd.GetInt32(0);
+                        p.Code = rd.GetString(1);
+                        p.DiscountType = rd.GetString(2);
+                        p.DiscountValue = rd.GetDecimal(3);
+                        p.StartDate = rd.GetDateTime(4);
+                        p.EndDate = rd.GetDateTime(5);
+                        p.Status = rd.GetString(6);
+                        result.Add(p);
+                    }
+                }
+            }
+            return result;
+        }
+
+        // เพิ่มโปรโมชัน (ตรวจตาม CHECK ใน schema: percentage 0-100, fixed >= 0, end >= start)
+        public int AdminCreatePromo(string code, string discountType, decimal value, DateTime start, DateTime end)
+        {
+            if (string.IsNullOrWhiteSpace(code) || code.Trim().Length > 50)
+                throw new InvalidOperationException("BAD_CODE");
+            if (discountType != "percentage" && discountType != "fixed")
+                throw new InvalidOperationException("BAD_TYPE");
+            if (discountType == "percentage" && (value < 0 || value > 100))
+                throw new InvalidOperationException("BAD_VALUE");
+            if (discountType == "fixed" && value < 0)
+                throw new InvalidOperationException("BAD_VALUE");
+            if (end < start)
+                throw new InvalidOperationException("BAD_DATE");
+
+            const string sql = @"
+INSERT INTO promotions (promotion_code, discount_type, discount_value, start_date, end_date, status)
+VALUES (@code, @type, @value, @start, @end, 'active');
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            try
+            {
+                using (SqlConnection conn = Db.Open())
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.Add("@code", SqlDbType.VarChar, 50).Value = code.Trim().ToUpperInvariant();
+                    cmd.Parameters.Add("@type", SqlDbType.VarChar, 20).Value = discountType;
+                    SqlParameter valueParam = cmd.Parameters.Add("@value", SqlDbType.Decimal);
+                    valueParam.Precision = 10;
+                    valueParam.Scale = 2;
+                    valueParam.Value = value;
+                    cmd.Parameters.Add("@start", SqlDbType.Date).Value = start.Date;
+                    cmd.Parameters.Add("@end", SqlDbType.Date).Value = end.Date;
+                    return (int)cmd.ExecuteScalar();
+                }
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Number == 2627 || ex.Number == 2601)
+                    throw new InvalidOperationException("DUP_CODE");
+                throw;
+            }
+        }
+
+        // สลับสถานะโปรโมชัน active/inactive
+        public void AdminTogglePromo(int promotionId)
+        {
+            const string sql = @"
+UPDATE promotions
+SET status = CASE WHEN status = 'active' THEN 'inactive' ELSE 'active' END
+WHERE promotion_id = @id;";
+
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.Add("@id", SqlDbType.Int).Value = promotionId;
+                if (cmd.ExecuteNonQuery() == 0)
+                    throw new InvalidOperationException("NOT_FOUND");
+            }
+        }
+
+        // ดึงหนังทุกเรื่อง (รวม inactive) สำหรับจอแอดมิน
+        public List<Movie> AdminGetMovies()
+        {
+            const string sql = @"
+SELECT movie_id, title, description, duration, genre, release_date, status, poster_url
+FROM movies
+ORDER BY title;";
+
+            List<Movie> result = new List<Movie>();
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.CommandTimeout = 5;
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                {
+                    while (rd.Read())
+                        result.Add(ReadMovie(rd));
+                }
+            }
+            return result;
+        }
+
+        // เพิ่มหนังใหม่ (posterPath เป็น null ได้ถ้าไม่แนบไฟล์)
+        // คืน movie_id ที่สร้าง
+        public int AdminAddMovie(string title, string description, int duration,
+            string genre, DateTime releaseDate, string status, string posterPath)
+        {
+            if (string.IsNullOrWhiteSpace(title) || title.Trim().Length > 200)
+                throw new InvalidOperationException("BAD_TITLE");
+            if (duration <= 0)
+                throw new InvalidOperationException("BAD_DURATION");
+            if (string.IsNullOrWhiteSpace(genre) || genre.Trim().Length > 50)
+                throw new InvalidOperationException("BAD_GENRE");
+            if (status != "active" && status != "inactive")
+                throw new InvalidOperationException("BAD_STATUS");
+
+            const string sql = @"
+INSERT INTO movies (title, description, duration, genre, release_date, status, poster_url)
+VALUES (@title, @desc, @duration, @genre, @release, @status, @poster);
+SELECT CAST(SCOPE_IDENTITY() AS INT);";
+
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.Add("@title", SqlDbType.VarChar, 200).Value = title.Trim();
+                cmd.Parameters.Add("@desc", SqlDbType.VarChar, -1).Value =
+                    (object)description ?? DBNull.Value;
+                cmd.Parameters.Add("@duration", SqlDbType.Int).Value = duration;
+                cmd.Parameters.Add("@genre", SqlDbType.VarChar, 50).Value = genre.Trim();
+                cmd.Parameters.Add("@release", SqlDbType.Date).Value = releaseDate.Date;
+                cmd.Parameters.Add("@status", SqlDbType.VarChar, 20).Value = status;
+                cmd.Parameters.Add("@poster", SqlDbType.VarChar, 500).Value =
+                    (object)posterPath ?? DBNull.Value;
+                return (int)cmd.ExecuteScalar();
+            }
+        }
+
+        // สลับสถานะหนัง active/inactive
+        public void AdminToggleMovie(int movieId)
+        {
+            const string sql = @"
+UPDATE movies
+SET status = CASE WHEN status = 'active' THEN 'inactive' ELSE 'active' END
+WHERE movie_id = @id;";
+
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                cmd.Parameters.Add("@id", SqlDbType.Int).Value = movieId;
+                if (cmd.ExecuteNonQuery() == 0)
+                    throw new InvalidOperationException("NOT_FOUND");
+            }
+        }
+
+        // ดึงโรงที่ active สำหรับ dropdown
+        public List<HallOption> AdminGetHalls()
+        {
+            const string sql = @"
+SELECT hall_id, hall_name
+FROM cinema_halls
+WHERE status = 'active'
+ORDER BY hall_name;";
+
+            List<HallOption> result = new List<HallOption>();
+            using (SqlConnection conn = Db.Open())
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
+            {
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                {
+                    while (rd.Read())
+                    {
+                        HallOption h = new HallOption();
+                        h.HallId = rd.GetInt32(0);
+                        h.HallName = rd.GetString(1);
+                        result.Add(h);
+                    }
+                }
+            }
+            return result;
+        }
+
         private static Movie ReadMovie(SqlDataReader rd)
         {
             return new Movie

@@ -41,8 +41,8 @@
     <asp:Panel ID="pnlList" runat="server" Visible="false">
       <div class="tablewrap">
         <asp:Repeater ID="rptBookings" runat="server">
-          <HeaderTemplate><table class="shows"><thead><tr><th>รหัสจอง</th><th>หนัง</th><th>รอบฉาย</th><th>โรง</th><th>ที่นั่ง</th><th>ยอดรวม (บาท)</th><th>ชำระเงิน</th><th>สถานะ</th></tr></thead><tbody></HeaderTemplate>
-          <ItemTemplate><tr><td><%# Eval("BookingId") %></td><td><%#: Eval("MovieTitle") %></td><td><%# Eval("DisplayShowTime") %></td><td><%#: Eval("HallName") %></td><td><%#: Eval("DisplaySeats") %></td><td><%#: Eval("DisplayTotal") %></td><td><%#: Eval("PaymentMethod") %> (<%#: Eval("PaymentStatus") %>)</td><td><span class='<%# Eval("StatusClass") %>'><%#: Eval("BookingStatus") %></span></td></tr></ItemTemplate>
+          <HeaderTemplate><table class="shows"><thead><tr><th>รหัสจอง</th><th>หนัง</th><th>รอบฉาย</th><th>โรง</th><th>ที่นั่ง</th><th>ยอดรวม (บาท)</th><th>ชำระเงิน</th><th>สถานะ</th><th>จัดการ</th></tr></thead><tbody></HeaderTemplate>
+          <ItemTemplate><tr><td><%# Eval("BookingId") %></td><td><%#: Eval("MovieTitle") %></td><td><%# Eval("DisplayShowTime") %></td><td><%#: Eval("HallName") %></td><td><%#: Eval("DisplaySeats") %></td><td><%#: Eval("DisplayTotal") %></td><td><%#: Eval("PaymentMethod") %> (<%#: Eval("PaymentStatus") %>)</td><td><span class='<%# Eval("StatusClass") %>'><%#: Eval("BookingStatus") %></span></td><td><asp:Button ID="btnCancel" runat="server" Text="ยกเลิก" CssClass="btn small danger" CommandArgument='<%# Eval("BookingId") %>' Visible='<%# Eval("IsCancellable") %>' OnCommand="btnCancel_Command" OnClientClick="return confirm('ยกเลิกการจองนี้? ที่นั่งจะว่างทันที');" /></td></tr></ItemTemplate>
           <FooterTemplate></tbody></table></FooterTemplate>
         </asp:Repeater>
       </div>

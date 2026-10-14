@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using System.Net.Mail;
 
 namespace Cinema_Ticketing___Seat_Booking.Data
@@ -19,6 +20,26 @@ namespace Cinema_Ticketing___Seat_Booking.Data
             {
                 return false;
             }
+        }
+
+        // ค่าจาก input แบบ date: "yyyy-MM-dd"
+        public static bool TryParseDate(string text, out DateTime value)
+        {
+            text = (text ?? "").Trim();
+            if (DateTime.TryParseExact(text, "yyyy-MM-dd",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out value))
+                return true;
+            return DateTime.TryParse(text, out value);
+        }
+
+        // ค่าจาก input แบบ datetime-local: "yyyy-MM-ddTHH:mm"
+        public static bool TryParseDateTime(string text, out DateTime value)
+        {
+            text = (text ?? "").Trim();
+            if (DateTime.TryParseExact(text, "yyyy-MM-dd'T'HH:mm",
+                    CultureInfo.InvariantCulture, DateTimeStyles.None, out value))
+                return true;
+            return DateTime.TryParse(text, out value);
         }
     }
 }

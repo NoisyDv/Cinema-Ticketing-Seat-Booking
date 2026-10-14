@@ -45,5 +45,11 @@ namespace Cinema_Ticketing___Seat_Booking.Models
                 return "pill off";
             }
         }
+
+        // ยกเลิกได้เฉพาะการจองที่ยังค้าง/ยืนยันแล้ว (ตรงกับ sp_CancelBooking)
+        public bool IsCancellable
+        {
+            get { return BookingStatus == "pending" || BookingStatus == "confirmed"; }
+        }
     }
 }
