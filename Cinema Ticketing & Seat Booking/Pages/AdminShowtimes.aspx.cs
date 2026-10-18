@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Web;
@@ -14,7 +14,7 @@ namespace Cinema_Ticketing___Seat_Booking.Pages
 
         protected void Page_Load(object sender, EventArgs e)
         {
-            AdminAuth.RequireAdmin(this);
+            if (!AdminAuth.RequireAdmin(this)) return;
             if (!IsPostBack)
             {
                 LoadDropdowns();

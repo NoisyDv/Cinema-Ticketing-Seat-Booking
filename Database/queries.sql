@@ -1,3 +1,6 @@
+﻿USE CinemaDB;
+GO
+
 -- =========================================================
 -- queries.sql  (revised v2)
 -- Complex SQL Queries จำนวน 10 ข้อ
@@ -61,6 +64,7 @@ WHERE b.booking_status  = 'confirmed'
   AND pay.payment_status = 'paid'
   -- ถ้าใช้เป็นหน้าของลูกค้าคนเดียว ให้เพิ่ม: AND b.customer_id = @customer_id
 ORDER BY b.booking_time DESC, b.booking_id, se.row_label, se.seat_number;
+GO
 
 
 -- =========================================================
@@ -106,6 +110,7 @@ LEFT JOIN (
 ) occ ON occ.seat_id = se.seat_id
 WHERE s.showtime_id = @showtime_id
 ORDER BY se.row_label, se.seat_number;
+GO
 
 
 -- =========================================================
@@ -139,6 +144,7 @@ INNER JOIN (
 GROUP BY m.movie_id, m.title, m.genre
 HAVING SUM(bt.ticket_count) >= 5
 ORDER BY tickets_sold DESC;
+GO
 
 
 -- =========================================================
@@ -175,6 +181,7 @@ WHERE s.status IN ('scheduled', 'completed')
 GROUP BY s.showtime_id, m.title, ch.hall_name, s.start_time, hs.seat_total
 HAVING COUNT(t.ticket_id) * 100.0 / hs.seat_total >= 50
 ORDER BY occupancy_percent DESC;
+GO
 
 
 -- =========================================================
@@ -212,6 +219,7 @@ LEFT JOIN booking_subtotal bs ON bs.booking_id = b.booking_id
 GROUP BY p.promotion_id, p.promotion_code, p.discount_type, p.discount_value
 HAVING COUNT(b.booking_id) >= 2
 ORDER BY times_used DESC, net_revenue DESC;
+GO
 
 
 -- =========================================================
@@ -249,6 +257,7 @@ SELECT
     ) AS last_booking_time
 FROM customers c
 ORDER BY total_spent DESC, c.name;
+GO
 
 
 -- =========================================================
@@ -281,6 +290,7 @@ WHERE s.status = 'scheduled'
              OR (b.booking_status = 'pending' AND b.expires_at > SYSDATETIME()))
   )
 ORDER BY s.start_time;
+GO
 
 
 -- =========================================================
@@ -321,6 +331,7 @@ WHERE s.status <> 'cancelled'
         AND s.start_time < o2.end_time
   )
 ORDER BY ch.hall_name, s.start_time;
+GO
 
 
 -- =========================================================
@@ -363,6 +374,7 @@ SELECT
     END AS vs_average
 FROM movie_revenue
 ORDER BY revenue_rank, title;
+GO
 
 
 -- =========================================================
@@ -404,3 +416,4 @@ FROM (
 ) AS ranked_bookings
 WHERE booking_sequence <= 3   -- เอาเฉพาะ 3 รายการล่าสุดของแต่ละคน
 ORDER BY customer_id, booking_sequence;
+GO

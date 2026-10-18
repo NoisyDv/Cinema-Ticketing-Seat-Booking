@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -301,7 +301,7 @@ ORDER BY row_label, seat_number;";
                     "INSERT INTO customers (name, email, phone) VALUES (@n, @e, @p);" +
                     " SELECT CAST(SCOPE_IDENTITY() AS INT);", conn))
                 {
-                    cmd.Parameters.Add("@n", SqlDbType.VarChar, 150).Value = name;
+                    cmd.Parameters.Add("@n", SqlDbType.NVarChar, 150).Value = name;
                     cmd.Parameters.Add("@e", SqlDbType.VarChar, 255).Value = email;
                     cmd.Parameters.Add("@p", SqlDbType.VarChar, 20).Value = phone;
                     return Convert.ToInt32(cmd.ExecuteScalar());

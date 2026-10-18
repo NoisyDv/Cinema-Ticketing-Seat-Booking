@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Web;
 using Cinema_Ticketing___Seat_Booking.Data;
@@ -26,11 +26,15 @@ namespace Cinema_Ticketing___Seat_Booking.Pages
             }
 
             Movie movie;
-            List<Showtime> shows;
+            List<Showtime> shows = new List<Showtime>();
             try
             {
                 movie = _repo.GetMovie(movieId);
-                shows = movie != null ? _repo.GetShowtimes(movieId) : new List<Showtime>();
+                if (movie != null)
+                {
+                    try { shows = _repo.GetShowtimes(movieId); }
+                    catch { shows = new List<Showtime>(); }
+                }
             }
             catch
             {

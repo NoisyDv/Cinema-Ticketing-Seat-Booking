@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 
 namespace Cinema_Ticketing___Seat_Booking.Models
 {
@@ -46,10 +46,14 @@ namespace Cinema_Ticketing___Seat_Booking.Models
             }
         }
 
-        // ยกเลิกได้เฉพาะการจองที่ยังค้าง/ยืนยันแล้ว (ตรงกับ sp_CancelBooking)
+        // ยกเลิกได้เฉพาะการจองที่ยังค้าง/ยืนยันแล้ว และรอบฉายยังไม่เริ่ม (ตรงกับ sp_CancelBooking)
         public bool IsCancellable
         {
-            get { return BookingStatus == "pending" || BookingStatus == "confirmed"; }
+            get
+            {
+                return (BookingStatus == "pending" || BookingStatus == "confirmed")
+                    && ShowTime > System.DateTime.Now;
+            }
         }
     }
 }

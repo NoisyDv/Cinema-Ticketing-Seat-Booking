@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Configuration;
 using System.Web;
 using System.Web.UI;
@@ -22,13 +22,16 @@ namespace Cinema_Ticketing___Seat_Booking.Data
         }
 
         // เรียกบรรทัดแรกของ Page_Load ทุกหน้าแอดมิน
-        public static void RequireAdmin(Page page)
+        public static bool RequireAdmin(Page page)
         {
             if (!IsAdmin(page))
             {
                 page.Response.Redirect("~/Pages/AdminLogin.aspx", false);
                 HttpContext.Current.ApplicationInstance.CompleteRequest();
+                try { page.Response.End(); } catch (System.Threading.ThreadAbortException) { }
+                return false;
             }
+            return true;
         }
 
         public static bool CheckPasscode(string input)

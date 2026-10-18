@@ -1,3 +1,23 @@
+﻿
+-- =========================================================
+-- โครงงานวิชาระบบฐานข้อมูล หัวข้อที่ 7: ระบบจองตั๋วภาพยนตร์และผังที่นั่ง
+-- สคริปต์: schema.sql (สร้างฐานข้อมูล ตาราง Constraints และ Indexes)
+-- =========================================================
+USE master;
+GO
+
+IF DB_ID('CinemaDB') IS NOT NULL
+BEGIN
+    ALTER DATABASE CinemaDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE CinemaDB;
+END
+GO
+
+CREATE DATABASE CinemaDB;
+GO
+
+USE CinemaDB;
+GO
 
 -- =========================================================
 -- ตาราง: movies
@@ -5,10 +25,10 @@
 -- =========================================================
 CREATE TABLE movies (
     movie_id      INT IDENTITY(1,1) PRIMARY KEY,
-    title         VARCHAR(200)  NOT NULL,
-    description   VARCHAR(MAX)      NULL,
+    title         NVARCHAR(200) NOT NULL,
+    description   NVARCHAR(MAX)     NULL,
     duration      INT           NOT NULL,          -- หน่วยเป็นนาที
-    genre         VARCHAR(50)   NOT NULL,
+    genre         NVARCHAR(50)  NOT NULL,
     release_date  DATE          NOT NULL,
     status        VARCHAR(20)   NOT NULL,
     poster_url    VARCHAR(500)      NULL,
@@ -28,7 +48,7 @@ CREATE TABLE movies (
 -- =========================================================
 CREATE TABLE cinema_halls (
     hall_id    INT IDENTITY(1,1) PRIMARY KEY,
-    hall_name  VARCHAR(100)  NOT NULL,
+    hall_name  NVARCHAR(100) NOT NULL,
     capacity   INT           NOT NULL,
     status     VARCHAR(20)   NOT NULL,
 
@@ -119,7 +139,7 @@ CREATE TABLE showtimes (
 -- =========================================================
 CREATE TABLE customers (
     customer_id  INT IDENTITY(1,1) PRIMARY KEY,
-    name         VARCHAR(150)  NOT NULL,
+    name         NVARCHAR(150) NOT NULL,
     email        VARCHAR(255)  NOT NULL,
     phone        VARCHAR(20)   NOT NULL,
     created_at   DATETIME     NOT NULL CONSTRAINT df_customers_created_at 

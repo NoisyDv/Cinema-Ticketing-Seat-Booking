@@ -21,7 +21,16 @@
         }
     }
     document.addEventListener('change', function (e) {
-        if (e.target && e.target.name === 'seat') { upd(); }
+        if (e.target && e.target.name === 'seat') {
+            if (e.target.checked) {
+                var checkedBoxes = document.querySelectorAll('input[name="seat"]:checked');
+                if (checkedBoxes.length > 10) {
+                    e.target.checked = false;
+                    alert('สามารถเลือกที่นั่งได้สูงสุด 10 ที่ต่อการจอง');
+                }
+            }
+            upd();
+        }
     });
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', upd);

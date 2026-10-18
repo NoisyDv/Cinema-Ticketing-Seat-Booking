@@ -1,3 +1,6 @@
+﻿
+USE CinemaDB;
+GO
 
 -- =========================================================
 -- 1. Stored Procedure: sp_BookMovieSeats

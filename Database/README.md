@@ -1,13 +1,13 @@
 # Database — ไฟล์ SQL ของระบบจองตั๋วหนัง
 
-รันตามลำดับนี้ใน SQL Server Management Studio (SSMS):
+เปิดไฟล์ใน SQL Server Management Studio (SSMS) แล้วรันตามลำดับนี้ (`schema.sql` จะสร้างฐานข้อมูล `CinemaDB` ให้อัตโนมัติ):
 
 | ลำดับ | ไฟล์ | หน้าที่ |
 |---|---|---|
-| 1 | `schema.sql` | สร้างตาราง 9 ตาราง (`movies`, `cinema_halls`, `seats`, `showtimes`, `customers`, `promotions`, `bookings`, `tickets`, `payments`) + index |
+| 1 | `schema.sql` | สร้างฐานข้อมูล `CinemaDB` + ตาราง 9 ตาราง + Constraints + Indexes |
 | 2 | `data.sql` | ใส่ mock data (หนังจริง 30 เรื่อง + โปสเตอร์, โรง 20 โรง, ที่นั่ง, โปรโมชัน, ลูกค้า, รอบฉาย, การจอง — ดูแลด้วยมือ ห้ามปั่นใหม่ทับ) |
 | 3 | `logic.sql` | สร้าง `sp_BookMovieSeats` (จอง/ล็อก/จ่าย), trigger `trg_ReleaseExpiredSeatLocks`, view `vw_BoxOfficeOccupancyReport` |
-| 4 | `queries.sql` | query ตัวอย่าง 10 ข้อ (ไม่ต้องรันทั้งหมด — เปิดดูเป็นข้อ ๆ ได้) |
+| 4 | `queries.sql` | query ตัวอย่าง 10 ข้อ (ไม่ต้องรันทั้งหมด — มีคำสั่ง `GO` คั่น รันเดี่ยวหรือเปิดดูเป็นข้อ ๆ ได้) |
 
 ## การเชื่อมกับเว็บไซต์
 

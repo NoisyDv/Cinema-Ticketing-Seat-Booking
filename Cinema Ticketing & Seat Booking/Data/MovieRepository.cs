@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
@@ -126,7 +126,7 @@ ORDER BY title;";
             return result;
         }
 
-        // ดึงหนังเรื่องเดียวที่ยังฉายอยู่ (status = 'active') ไม่เจอคืน null
+        // ดึงหนังเรื่องเดียวที่ยังฉายอยู่ (status = 'active') ไม่เจอคืน null (fallback เป็น Seed หากต่อ DB ไม่ได้)
         public Movie GetMovie(int movieId)
         {
             const string sql = @"
@@ -134,16 +134,23 @@ SELECT movie_id, title, description, duration, genre, release_date, status, post
 FROM movies
 WHERE movie_id = @id AND status = 'active';";
 
-            using (var conn = Db.Open())
-            using (var cmd = new SqlCommand(sql, conn))
+            try
             {
-                cmd.CommandTimeout = 5;
-                cmd.Parameters.Add("@id", SqlDbType.Int).Value = movieId;
-                using (var rd = cmd.ExecuteReader())
+                using (var conn = Db.Open())
+                using (var cmd = new SqlCommand(sql, conn))
                 {
-                    if (!rd.Read()) return null;
-                    return ReadMovie(rd);
+                    cmd.CommandTimeout = 5;
+                    cmd.Parameters.Add("@id", SqlDbType.Int).Value = movieId;
+                    using (var rd = cmd.ExecuteReader())
+                    {
+                        if (!rd.Read()) return null;
+                        return ReadMovie(rd);
+                    }
                 }
+            }
+            catch
+            {
+                return Seed.FirstOrDefault(m => m.MovieId == movieId && m.Status == "active");
             }
         }
 
@@ -648,11 +655,11 @@ SELECT CAST(SCOPE_IDENTITY() AS INT);";
             using (SqlConnection conn = Db.Open())
             using (SqlCommand cmd = new SqlCommand(sql, conn))
             {
-                cmd.Parameters.Add("@title", SqlDbType.VarChar, 200).Value = title.Trim();
-                cmd.Parameters.Add("@desc", SqlDbType.VarChar, -1).Value =
+                cmd.Parameters.Add("@title", SqlDbType.NVarChar, 200).Value = title.Trim();
+                cmd.Parameters.Add("@desc", SqlDbType.NVarChar, -1).Value =
                     (object)description ?? DBNull.Value;
                 cmd.Parameters.Add("@duration", SqlDbType.Int).Value = duration;
-                cmd.Parameters.Add("@genre", SqlDbType.VarChar, 50).Value = genre.Trim();
+                cmd.Parameters.Add("@genre", SqlDbType.NVarChar, 50).Value = genre.Trim();
                 cmd.Parameters.Add("@release", SqlDbType.Date).Value = releaseDate.Date;
                 cmd.Parameters.Add("@status", SqlDbType.VarChar, 20).Value = status;
                 cmd.Parameters.Add("@poster", SqlDbType.VarChar, 500).Value =

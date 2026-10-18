@@ -1,4 +1,7 @@
-﻿INSERT INTO movies (title, description, duration, genre, release_date, status, poster_url) VALUES
+﻿USE CinemaDB;
+GO
+
+INSERT INTO movies (title, description, duration, genre, release_date, status, poster_url) VALUES
 (N'Avatar', N'A paraplegic marine is sent to the moon Pandora and is torn between following orders and protecting the Na''vi people.', 162, N'Sci-Fi', '20091218', N'active', N'Posters/Avatar.webp'),
 (N'Avengers: Endgame', N'The surviving Avengers assemble once more to undo the damage caused by Thanos.', 181, N'Action', '20190426', N'active', N'Posters/Avengers_Endgame.webp'),
 (N'Deadpool & Wolverine', N'Deadpool is pulled into a multiverse mission and must team up with a reluctant Wolverine.', 128, N'Action', '20240726', N'active', N'Posters/Deadpool_Wolverine.webp'),
