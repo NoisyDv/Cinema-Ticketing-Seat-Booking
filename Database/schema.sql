@@ -329,7 +329,7 @@ CREATE TABLE payments (
 -- Indexes เพื่อเพิ่มประสิทธิภาพการค้นหา
 -- =========================================================
 
--- ใช้บ่อยในขั้นตอนจองและรายงาน
+
 CREATE INDEX index_showtimes_movie_start
     ON showtimes (movie_id, start_time);
 
