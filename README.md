@@ -80,7 +80,7 @@
     ├── App_Start/        RouteConfig — เปิด Friendly URLs (ลิงก์แบบไม่มี .aspx)
     ├── Global.asax(.cs)  เรียก RouteConfig ตอนแอปสตาร์ท
     ├── Web.config        connection string (CinemaDB) + AdminPasscode + Default Document + MIME .webp + บังคับ UTF-8
-    └── packages.config   รายการ NuGet ที่ใช้จริง (FriendlyUrls / Compiler / Infra)
+    └── packages.config   รายการ NuGet ที่ใช้จริง (FriendlyUrls / Web.Infrastructure)
 ```
 
 ## แต่ละหน้าใช้ตารางไหน
@@ -107,6 +107,7 @@
 ## ข้อตกลงที่ต้องรู้ก่อนแก้โค้ด
 
 - ไฟล์ `.aspx`, `.cs` และ `.sql` ที่มีข้อความไทยถูกบันทึกเป็น **UTF-8 with BOM** ทั้งหมด (กันตัวอักษรเพี้ยนบน IIS และใน SSMS) — ถ้าเพิ่มไฟล์ใหม่ที่มีภาษาไทย ต้องทำแบบเดียวกัน
+- โปรเจกต์ใช้ C# compiler ที่มากับ .NET Framework ตอน compile หน้า `.aspx` (ไม่ได้ใช้ Roslyn) จึงไม่ต้องมี `bin\roslyn` — หลีกเลี่ยง syntax ใหม่กว่า C# 5 ใน inline code ของ `.aspx` (โค้ดใน `.cs` ยังใช้เวอร์ชันที่ Visual Studio รองรับได้ตามปกติ)
 - SQL ทั้ง 4 ไฟล์ผูกกับ `CinemaDB` ให้อัตโนมัติ (`schema.sql` มี `CREATE DATABASE CinemaDB` และทุกไฟล์มี `USE CinemaDB; GO` ด้านบน)
 - `data.sql` เป็นข้อมูลที่แต่งด้วยมือ — **ห้ามรันสคริปต์ปั่นข้อมูลทับ** (สคริปต์ต้นฉบับลบออกจาก repo แล้ว เหตุผลอยู่ใน `Database/README.md`)
 - มีแค่ 4 ไฟล์ SQL: ตรรกะการจองอยู่ใน stored procedure ส่วนตรรกะฝั่งแอดมินอยู่ใน C#
