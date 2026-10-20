@@ -6,17 +6,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>หนังที่กำลังฉาย | Cinema Ticketing</title>
 <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;700&family=IBM+Plex+Sans+Thai:wght@400;500&display=swap" rel="stylesheet" />
-<link href="../Content/movies.css" rel="stylesheet" />
-<script src="../Scripts/theme.js"></script>
+<link href="<%: ResolveUrl("~/Content/movies.css") %>" rel="stylesheet" />
+<script src="<%: ResolveUrl("~/Scripts/theme.js") %>"></script>
 </head>
 <body>
 <form id="form1" runat="server">
   <div class="topbar">
-    <div class="brand"><a href="Movies.aspx">🎬 Cinema Ticketing</a></div>
+    <div class="brand"><a href="<%: ResolveUrl("~/Pages/Movies.aspx") %>">🎬 Cinema Ticketing</a></div>
     <div style="display:flex;gap:10px;align-items:center;">
       <div class="meta">หนังที่กำลังฉาย (เชื่อม DB + โฟลเดอร์ Posters)</div>
-      <a class="golink" href="History.aspx">ประวัติการจอง</a>
-      <a class="golink" href="Dashboard.aspx">รายงาน</a>
+      <a class="golink" href="<%: ResolveUrl("~/Pages/History.aspx") %>">ประวัติการจอง</a>
+      <a class="golink" href="<%: ResolveUrl("~/Pages/Dashboard.aspx") %>">รายงาน</a>
       <button id="themeBtn" type="button" class="theme-btn" aria-pressed="false" title="สลับธีมสว่าง / มืด">🌙</button>
     </div>
   </div>
@@ -45,7 +45,7 @@
       <asp:Repeater ID="rptMovies" runat="server">
         <ItemTemplate>
           <article class="card">
-            <a class="posterlink" href='<%# "MovieDetails.aspx?movie_id=" + Eval("MovieId") %>'>
+            <a class="posterlink" href='<%# ResolveUrl("~/Pages/MovieDetails.aspx") + "?movie_id=" + Eval("MovieId") %>'>
               <img src="<%# ResolvePosterUrl((string)Eval("PosterUrl")) %>"
                    alt="<%# "โปสเตอร์ " + Eval("Title") %>"
                    loading="lazy"
@@ -56,7 +56,7 @@
               <h2><%# Eval("Title") %></h2>
               <div class="meta"><%# Eval("DisplayDuration") %> • ฉาย <%# ((DateTime)Eval("ReleaseDate")).ToString("dd MMM yyyy") %></div>
               <div class="desc"><%# Eval("Description") %></div>
-              <a class="golink" href='<%# "MovieDetails.aspx?movie_id=" + Eval("MovieId") %>'>ดูรอบฉาย →</a>
+              <a class="golink" href='<%# ResolveUrl("~/Pages/MovieDetails.aspx") + "?movie_id=" + Eval("MovieId") %>'>ดูรอบฉาย →</a>
             </div>
           </article>
         </ItemTemplate>
